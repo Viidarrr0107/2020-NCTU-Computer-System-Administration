@@ -1,12 +1,12 @@
 #!/bin/sh
 
-# $ top -n max -o res | awk 'NR>9' | ...
+# $ top -n max -o res | awk 'NR>9' | awk '<CodeWithoutComment>'
 # $ top -n max -o res | ./ans.sh
 # You can test by
 # $ cat top.log | awk 'NR>9' | awk ''
 # if Shebang error, use vim and type
 # :set fileformat=unix
-
+# 
 BEGIN 
 {
 	tr=0;
