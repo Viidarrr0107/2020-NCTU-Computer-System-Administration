@@ -33,7 +33,7 @@ Select(){
 			PortInfo
 			;;
 		3)
-			echo "MOUNTPOINT INFO"
+			MPInfo
 			;;
 		4)
 			echo "SAVE SYSTEM INFO"
@@ -55,16 +55,31 @@ PortInfo(){
 	sost=$(sockstat -P tcp,udp | sed '1d' | awk '{printf("%s %s_%s\n", $3, $5, $6)}')
 	while :
 	do {
-		Option=$(dialog --cancel-label "Exit" --menu "PORT INFO(PID and Port)" 20 50 40 $sost 2>&1 >/dev/tty)
+		Option=$(dialog --cancel-label "Cancel" --menu "PORT INFO(PID and Port)" 20 50 40 $sost 2>&1 >/dev/tty)
 		if [ -z $Option ]; then
 			break
 		elif [ $Option = "?" ]; then
 			continue
 		else
 			detail=$(ps -p ${Option} -o user,pid,ppid,stat,%cpu,%mem,command | sed '1d' | \
-				awk ' { printf("USER: %s\nPID: %s\nPPID: %s\nSTAT: %s\n%%CPU: %s\n%%MEM: %s\nCOMMAND: %s", $1, $2, $3, $4, $5, $6, $7) } '
+				awk ' { printf("USER: %s\nPID: %s\nPPID: %s\nSTAT: %s\n%%CPU: %s\n%%MEM: %s\nCOMMAND: %s\n", $1, $2, $3, $4, $5, $6, $7) } '
 				)
 			dialog --title "Process Status: ${Option}" --msgbox "$detail" 20 50
+		fi
+	} done
+}
+MPInfo(){
+	dfah=$(df -ah | sed '1d' | awk '{printf("%s %s\n", $1, $6)}')
+	while :
+	do {
+		Option=$(dialog --cancel-label "Cancel" --menu "MOUNTPOINT INFO" 20 50 40 $dfah 2>&1 >/dev/tty)
+		if [ -z $Option ]; then
+			break
+		else
+			detail=$(df -ahT ${Option} | sed '1d' | \
+				awk ' { printf("Filesystem: %s\nType: %s\nSize: %s\nUsed: %s\nAvail: %s\nCapacity: %s\nMounted on: %s\n", $1, $2, $3, $4, $5, $6, $7) } '
+				)
+			dialog --title "${Option}" --msgbox "$detail" 20 50
 		fi
 	} done
 }
