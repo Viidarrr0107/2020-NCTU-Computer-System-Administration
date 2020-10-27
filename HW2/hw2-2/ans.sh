@@ -9,9 +9,9 @@ Main(){
 	while :
 	do {
 		Option=$(dialog --clear --cancel-label "Exit" --menu "System Info Panel" 20 50 10 \
-				1 "LOGIN RANK" 2 "PORT INFO" 3 "MOUNTPOINT INFO" \
-				4 "SAVE SYSTEM INFO" 5 "LOAD SYSTEM INFO" \
-				2>&1 >/dev/tty)
+			1 "LOGIN RANK" 2 "PORT INFO" 3 "MOUNTPOINT INFO" \
+			4 "SAVE SYSTEM INFO" 5 "LOAD SYSTEM INFO" \
+			2>&1 >/dev/tty)
 		result=$?
 		if [ $result -eq 0 ]; then
 			Select "$Option"
@@ -36,7 +36,7 @@ Select(){
 			MPInfo
 			;;
 		4)
-			echo "SAVE SYSTEM INFO"
+			SvSysInfo
 			;;
 		5)
 			echo "LOAD SYSTEM INFO"
@@ -82,6 +82,33 @@ MPInfo(){
 			dialog --title "${Option}" --msgbox "$detail" 20 50
 		fi
 	} done
+}
+SvSysInfo(){
+	physmem=$(sysctl -an hw.physmem)
+	usermem=$(sysctl -an hw.usermem)
+	tpm=$(echo $physmem | awk '{ val=$1+0;i=1;unit="B KBMBGBTB";while(val>=1024){val/=1024;i+=2;} } END {printf("%.2f %s\n", val, substr(unit, i, 2))}')
+	fmp=$(printf "$physmem $usermem" | awk '{ printf("%.2f\n", ($1-$2)/$1*100.0) }')
+	SvPath=$(dialog --title "Save to file" --clear --cancel-label "Cancel" \
+		--inputbox "Enter the path:" 10 60 \
+		2>&1 >/dev/tty)
+	if [ -z $SvPath ]; then
+		return
+	elif [ $(printf '%c' "$SvPath") != "/" ]; then
+		SvPath="${HOME}/${SvPath}"
+	fi
+	detail="This system report is generated on `date`\n\
+======================================================================\n\
+Hostname: `sysctl -an kern.hostname`\n\
+OS Name: `sysctl -an kern.ostype`\n\
+OS Release Version: `sysctl -an kern.osrelease`\n\
+OS Architecture: `sysctl -an hw.machine`\n\
+Processor model: `sysctl -an hw.model`\n\
+Number of Processor Cores: `sysctl -an hw.ncpu`\n\
+Total Physical Memory: ${tpm}\n\
+Free Memory (%%): ${fmp}\n\
+Total logged in users: `who | wc -l | grep -Eo '[0-9]+'`\n"
+	dialog --title "System Info" --msgbox "${detail}\n\nThis output file is saved to $SvPath" 20 90
+	printf "$detail" > $SvPath
 }
 
 Main
