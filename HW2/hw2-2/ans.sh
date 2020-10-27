@@ -84,18 +84,34 @@ MPInfo(){
 	} done
 }
 SvSysInfo(){
+	SvPath=""
+	while [ -z $SvPath ]
+	do
+		SvPath=$(dialog --title "Save to file" --clear --cancel-label "Cancel" \
+			--inputbox "Enter the path:" 10 60 \
+			2>&1 >/dev/tty)
+		if [ -z $SvPath ]; then
+			return
+		elif [ $(printf '%c' "$SvPath") != "/" ]; then
+			SvPath="${HOME}/${SvPath}"
+		fi
+		emsg=$( { printf "test" > $SvPath; } 2>&1 )
+		case "$emsg" in
+			*"Permission denied"*)
+				dialog --title "Permission denied" --msgbox "No write permission to ${SvPath}!" 20 60
+				SvPath=""
+				;;
+			*"No such file or directory"*)
+				dialog --title "Directory not found" --msgbox "${SvPath} not found!" 20 60
+				SvPath=""
+				;;
+		esac
+	done
+	
 	physmem=$(sysctl -an hw.physmem)
 	usermem=$(sysctl -an hw.usermem)
 	tpm=$(echo $physmem | awk '{ val=$1+0;i=1;unit="B KBMBGBTB";while(val>=1024){val/=1024;i+=2;} } END {printf("%.2f %s\n", val, substr(unit, i, 2))}')
 	fmp=$(printf "$physmem $usermem" | awk '{ printf("%.2f\n", ($1-$2)/$1*100.0) }')
-	SvPath=$(dialog --title "Save to file" --clear --cancel-label "Cancel" \
-		--inputbox "Enter the path:" 10 60 \
-		2>&1 >/dev/tty)
-	if [ -z $SvPath ]; then
-		return
-	elif [ $(printf '%c' "$SvPath") != "/" ]; then
-		SvPath="${HOME}/${SvPath}"
-	fi
 	detail="This system report is generated on `date`\n\
 ======================================================================\n\
 Hostname: `sysctl -an kern.hostname`\n\
@@ -107,8 +123,9 @@ Number of Processor Cores: `sysctl -an hw.ncpu`\n\
 Total Physical Memory: ${tpm}\n\
 Free Memory (%%): ${fmp}\n\
 Total logged in users: `who | wc -l | grep -Eo '[0-9]+'`\n"
-	dialog --title "System Info" --msgbox "${detail}\n\nThis output file is saved to $SvPath" 20 90
+	dialog --title "System Info" --msgbox "${detail}\n\nThis output file is saved to ${SvPath}" 20 90
 	printf "$detail" > $SvPath
+	
 }
 
 Main
