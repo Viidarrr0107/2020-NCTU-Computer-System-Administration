@@ -110,10 +110,10 @@ SvSysInfo(){
 	
 	physmem=$(sysctl -an hw.physmem)
 	#usermem=$(sysctl -an hw.usermem)
-	usermem=$(top -n max | sed -n 4p | awk '{print $10}' | grep -Eo '[0-9]+')
+	usermem=$(vmstat | sed -n 3p | awk '{print $5}' | grep -Eo '[0-9]+')
 	tpm=$(echo $physmem | awk '{ val=$1+0;i=1;unit="B KBMBGBTB";while(val>=1024){val/=1024;i+=2;} } END {printf("%.2f %s\n", val, substr(unit, i, 2))}')
 	#fmp=$(printf "$physmem $usermem" | awk '{ printf("%.2f\n", ($1-$2)/$1*100.0) }')
-	fmp=$(printf "$physmem $usermem" | awk '{ printf("%.2f\n", $2*1024.0*1024.0*1024.0/$1*100.0) }')
+	fmp=$(printf "$physmem $usermem" | awk '{ printf("%.2f\n", $2*1024.0/$1*100.0) }')
 	detail="This system report is generated on `date`\n\
 ======================================================================\n\
 Hostname: `sysctl -an kern.hostname`\n\
@@ -147,6 +147,10 @@ LdSysInfo(){
 				fPath=""
 				;;
 			*"No such file or directory"*)
+				dialog --title "File not found" --msgbox "${fPath} not found!" 20 60
+				fPath=""
+				;;
+			*"Not a directory"*)
 				dialog --title "File not found" --msgbox "${fPath} not found!" 20 60
 				fPath=""
 				;;
