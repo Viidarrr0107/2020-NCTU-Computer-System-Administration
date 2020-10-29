@@ -52,7 +52,9 @@ LoginRank(){
 	dialog --title "LoginRank" --msgbox "$Top5" 20 50
 }
 PortInfo(){
-	sost=$(sockstat -P tcp,udp -4 | sed '1d' | awk '{printf("%s %s_%s\n", $3, $5, $6)}')
+	sost=$(sockstat -P tcp,udp -4 | sed '1d' | \
+		awk '{ if(NF<=6){sub(/[^0-9]+/, "", $2);printf("%s %s_%s\n", $2, $4, $5)} else printf("%s %s_%s\n", $3, $5, $6) }'
+		)
 	while :
 	do {
 		Option=$(dialog --cancel-label "Cancel" --menu "PORT INFO(PID and Port)" 20 50 40 $sost 2>&1 >/dev/tty)
