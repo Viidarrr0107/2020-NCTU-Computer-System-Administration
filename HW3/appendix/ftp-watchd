@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# a rc-script for service ftp-watchd 
+#
+
+# PROVIDE: ftp-watchd
+# BEFORE: pure-ftpd
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+name="ftp-watchd"
+rcvar="ftpwatchd_enable"
+pidfile="/var/run/pure-uploadscript.pid"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+restart_cmd="${name}_restart"
+status_cmd="${name}_status"
+
+ftp-watchd_start()
+{
+	cmd="/usr/local/sbin/pure-uploadscript -Br ${uploadscript_path}"
+	ps -p `cat ${pidfile}` > /dev/null 2>&1 && echo "${name} already running? (pid=`cat ${pidfile}`)" || (${cmd} && echo "Starting ${name}.")
+}
+
+ftp-watchd_stop()
+{
+	ps -p `cat ${pidfile}` > /dev/null 2>&1 && kill -9 `cat ${pidfile}` && echo "Kill: `cat ${pidfile}`" || echo "${name} is not running"
+}
+
+ftp-watchd_restart()
+{
+	ftp-watchd_stop
+	ftp-watchd_start
+}
+
+ftp-watchd_status()
+{
+	ps -p `cat ${pidfile}` > /dev/null 2>&1 && echo "${name} is running as pid `cat ${pidfile}`." || echo "${name} is not running"
+}
+
+load_rc_config $name
+run_rc_command "$1"

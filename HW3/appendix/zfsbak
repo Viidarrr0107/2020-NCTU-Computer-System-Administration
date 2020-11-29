@@ -1,0 +1,112 @@
+#!/bin/sh
+
+if [ "$#" -lt 1 ]; then
+	echo "Usage:"
+	echo "- create: zfsbak DATASET [ROTATION_CNT]"
+	echo "- list: zfsbak -l|--list [DATASET|ID|DATASET ID]"
+	echo "- delete: zfsbak -d|--delete [DATASET|ID|DATASET ID]"
+	echo "- export: zfsbak -e|--export DATASET [ID]"
+	echo "- import: zfsbak -i|--import FILENAME DATASET"
+	exit
+fi
+if [ $1 = "-l" -o $1 = "--list" ]; then
+	table=$(zfs list -r -t snapshot -o name -s creation)
+	table=$(echo "${table}" | sed '1d' | awk 'BEGIN{printf("ID DATASET TIME\n")} {split($0, a, "@"); printf("%s %s %s\n", NR, a[1], a[2])}')
+	if [ -n "$2" ] && [ -n "$3" ]; then
+		table=$(zfs list -r -t snapshot -o name -s creation $2 2>&1)
+		result=$?
+		did=$(echo $3 | grep -Eo '[0-9]+')
+		if [ $result -eq 0 ] && [ -n "${did}" ] && [ "${did}" = $3 ]; then
+			table=$(echo "${table}" | sed '1d' | \
+				awk 'BEGIN{printf("ID DATASET TIME\n")} {split($0, a, "@"); printf("%s %s %s\n", NR, a[1], a[2])}' | \
+				sed "1,${did}d" | head -n 1
+			)
+			table=$(echo "${table}" | awk 'BEGIN{printf("ID DATASET TIME\n")} {printf("%s\n", $0)}')
+		else
+			echo "Usage: zfsbak -l|--list [DATASET|ID|DATASET ID]"
+			exit
+		fi
+	elif [ -n "$2" ]; then
+		table=$(zfs list -r -t snapshot -o name -s creation $2 2>&1)
+		result=$?
+		if [ $result -eq 0 ]; then
+			table=$(echo "${table}" | sed '1d' | awk 'BEGIN{printf("ID DATASET TIME\n")} {split($0, a, "@"); printf("%s %s %s\n", NR, a[1], a[2])}')
+		else
+			did=$(echo $2 | grep -Eo '[0-9]+')
+			if [ -n "${did}" ] && [ "${did}" = $2 ]; then
+				table=$(zfs list -r -t snapshot -o name -s creation | sed '1d' | \
+					awk 'BEGIN{printf("ID DATASET TIME\n")} {split($0, a, "@"); printf("%s %s %s\n", NR, a[1], a[2])}' | \
+					sed "1,${did}d" | head -n 1
+				)
+				table=$(echo "${table}" | awk 'BEGIN{printf("ID DATASET TIME\n")} {printf("%s\n", $0)}')
+			else
+				echo "Usage: zfsbak -l|--list [DATASET|ID|DATASET ID]"
+				exit
+			fi
+		fi
+	fi
+	echo "${table}"
+elif [ $1 = "-d" -o $1 = "--delete" ]; then
+	table=$(zfs list -r -t snapshot -o name -s creation | sed '1d')
+	if [ -n "$2" ] && [ -n "$3" ]; then
+		table=$(zfs list -r -t snapshot -o name -s creation $2 2>&1)
+		result=$?
+		did=$(echo $3 | grep -Eo '[0-9]+')
+		if [ $result -eq 0 ] && [ -n "${did}" ] && [ "${did}" = $3 ]; then
+			table=$(echo "${table}" | sed "1,${did}d" | head -n 1)
+		else
+			echo "Usage: zfsbak -l|--list [DATASET|ID|DATASET ID]"
+			exit
+		fi
+	elif [ -n "$2" ]; then
+		table=$(zfs list -r -t snapshot -o name -s creation $2 2>&1)
+		result=$?
+		if [ $result -eq 0 ]; then
+			table=$(echo "${table}" | sed '1d')
+		else
+			did=$(echo $2 | grep -Eo '[0-9]+')
+			if [ -n "${did}" ] && [ "${did}" = $2 ]; then
+				table=$(zfs list -r -t snapshot -o name -s creation | sed "1,${did}d" | head -n 1)
+			else
+				echo "Usage: zfsbak -l|--list [DATASET|ID|DATASET ID]"
+				exit
+			fi
+		fi
+	fi
+
+	IFS="$(printf '\nx')" && IFS="${IFS%x}";
+	for snapshot in $table 
+	do
+		echo "Destroy ${snapshot}"
+		zfs destroy ${snapshot}
+	done
+elif [ $1 = "-e" -o $1 = "--export" ]; then
+	echo "Usage: zfsbak -e|--export DATASET [ID]"
+elif [ $1 = "-i" -o $1 = "--import" ]; then
+	echo "Usage: zfsbak -i|--import FILENAME DATASET"
+else
+	dataset=$1
+	echo "Snap ${dataset}@`date +"%Y-%m-%d-%H:%M:%S"`"
+	zfs snapshot -r "${dataset}@`date +"%Y-%m-%d-%H:%M:%S"`"
+	result=$?
+	if [ -z "$2" ]; then
+		rotate_count="20"
+	else
+		rotate_count=$2
+	fi
+	if [ $result -eq 0 ]; then
+		table=$(zfs list -r -t snapshot -o name -s creation $dataset | sed '1d')
+		snap_count=$(echo "${table}" | wc -l | grep -Eo '[0-9]+')
+		clear_count=$((${snap_count}-${rotate_count}))
+		IFS="$(printf '\nx')" && IFS="${IFS%x}";
+		for snapshot in $table
+		do
+			if [ "${clear_count}" -le 0 ]; then
+				break
+			fi
+			echo "Destroy ${snapshot}"
+			zfs destroy ${snapshot}
+			clear_count=$((${clear_count}-1))
+		done
+	fi
+fi
