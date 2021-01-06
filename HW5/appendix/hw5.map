@@ -1,0 +1,4 @@
+/net/home/nisuser1    -ro    sahw5.nctu.cs:/net/home/nisuser1
+/net/home/nisuser2    -ro    sahw5.nctu.cs:/net/home/nisuser2
+/net/data/95    -ro    sahw5.nctu.cs:/net/data/95
+/net/home/nisstu95    -rw    sahw5.nctu.cs:/net/home/nisstu95
